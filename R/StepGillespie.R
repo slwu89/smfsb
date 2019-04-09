@@ -1,4 +1,7 @@
 # function
+fequal <- function(x,y,tol=.Machine$double.eps^2){
+  abs(x-y) <= tol
+}
 
 StepGillespie <- function(N)
 {
@@ -27,8 +30,8 @@ StepGillespie <- function(N)
              x = x+S[,j]
            }
          }
-         )		
-}	
+         )
+}
 
 simTs <- function(x0, t0=0, tt=100, dt=0.1, stepFun, ...)
 {
@@ -43,6 +46,34 @@ simTs <- function(x0, t0=0, tt=100, dt=0.1, stepFun, ...)
     t = t+dt
     x = stepFun(x,t,dt,...)
     mat[i,] = x
+  }
+  ts(mat, start=t0, deltat=dt, names=names)
+}
+
+simTs_event <- function(x0, t0=0, tt=100, dt=0.1, stepFun, events, progress = FALSE, ...)
+{
+  n = (tt-t0) %/% dt + 1
+  u = length(x0)
+  names = names(x0)
+  mat = matrix(nrow=n,ncol=u)
+  x = x0
+  t = t0
+  mat[1,] = x
+  if(progress){
+    pbar <- txtProgressBar(min = 1,max = n)
+  }
+  for (i in 2:n) {
+    t = t+dt
+    x = stepFun(x,t,dt,...)
+    # add the event to the state vector
+    if(nrow(events) > 0 & fequal(events[1,"time"],t)){
+      x[events[1,"var"]] <- x[events[1,"var"]] + events[1,"value"]
+      events <- events[-1,]
+    }
+    mat[i,] = x
+    if(progress){
+      setTxtProgressBar(pb = pbar,value = i)
+    }
   }
   ts(mat, start=t0, deltat=dt, names=names)
 }
@@ -79,4 +110,3 @@ simSample <- function(n=100, x0, t0=0, deltat, stepFun, ...)
 
 
 # eof
-
